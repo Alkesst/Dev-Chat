@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
+#include <pthread.h>
 
 
 struct User{
@@ -20,4 +21,5 @@ struct Server{
     size_t length;   // Elementos actuales dentro de la lista;
     size_t capacity; // cantidad de elementos que caben en el array
     int server;
+    pthread_t thread;
 };

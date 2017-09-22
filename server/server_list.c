@@ -1,6 +1,8 @@
-#include <stdbool.h>
 #include "chat.h"
 #include "server_list.h"
+
+#include <stdbool.h>
+
 
 static inline void make_array_great_again(struct Server* server);
 static bool contains_user(const struct Server* server, const struct User* user);
@@ -12,7 +14,7 @@ void insert_new_user(struct Server* server, const struct User* new_user) {
             make_array_great_again(server);
         }
         memcpy(&server->users[server->length++], new_user, sizeof(struct User));
-        printf("The user was added\n");
+        printf("The user %s was added\n", new_user->username);
     } else{
         printf("This user is already in the server\n");
     }
