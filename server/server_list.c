@@ -1,4 +1,4 @@
-#include "chat.h"
+#include "chat_server.h"
 #include "server_list.h"
 
 #include <stdbool.h>

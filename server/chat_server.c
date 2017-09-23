@@ -1,8 +1,8 @@
-#include "chat.h"
+#include "chat_server.h"
 #include "server.h"
 
 #include <stdlib.h>
-//#include <>
+// Server Main.
 
 static struct Server server;
 void stopping_server(int number);
@@ -16,7 +16,7 @@ int main(int argc, const char* argv[]){
         if(local_var >= 0 && local_var <= 65535){
             port = local_var;
         } else{
-            fprintf(stderr, "%s\n", "That's not a fucking port, you fucking piece of shit");
+            fprintf(stderr, "Argument is requiered: Expected port\n");
             /*Ends the program*/
             exit(2);
         }

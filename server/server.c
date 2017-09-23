@@ -1,4 +1,4 @@
-#include "chat.h"
+#include "chat_server.h"
 #include "server_list.h"
 
 #include <sys/ioctl.h>
@@ -45,6 +45,7 @@ bool open_server(struct Server* server, int port){
         int bind_var = bind(server->server, (struct sockaddr*) &listening_adress, sizeof(listening_adress));
         if(bind_var == -1){
             server_openned = false;
+            close(server->server);
             perror("");
         } else{
             /*Listens the */
@@ -86,14 +87,18 @@ static void handle_connection(struct Server* server, int connection){
     /*If it's the first time that an user logs into the server, it adds to a list*/
     int read_chars = 0;
     char user_response[25];
-    send(connection, "Send me your username\n", 23, 0);
-    send(connection, "Your username must have less than 25 chars \n", 43, 0);
-    read_chars = recv(connection, user_response, 25, 0);
+    do{
+        send(connection, "Send me your username\n", 23, 0);
+        read_chars = recv(connection, user_response, 25, 0);
+        if(read_chars > 25){
+            send(connection, "Your username must have less tan 25 chars\n", 43, 0);
+        }
+    }while(read_chars > 25);
     struct User user;
     char* username;
     username = malloc(read_chars);
     memcpy(username, user_response, read_chars);
-    username[read_chars - 2] = '\0';
+    username[read_chars - 1] = '\0';
     user.username = username;
     /*Generates an ID from a HASH of the string*/
     user.id = associate_with_id(&user);
@@ -191,8 +196,8 @@ static void* transmission(void* polymorph){
                     message[ice_t+1] = ']';
                     message[ice_t + 2] = ':';
                     message[ice_t + 3] = ' ';
-                    message[bytes_available + ice_t + 3] = '\0';
-                    message[bytes_available + ice_t + 2] = '\n';
+                    message[bytes_available + ice_t + 4] = '\0';
+                    message[bytes_available + ice_t + 3] = '\n';
                     send_message(server, &server->users[i], message);
                 }
                 if(FD_ISSET(server->users[i].connection, &errors)){

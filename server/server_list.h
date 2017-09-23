@@ -1,4 +1,4 @@
-#include "chat.h"
+#include "chat_server.h"
 
 void insert_new_user(struct Server* server, const struct User* new_user);
 
