@@ -23,6 +23,7 @@ void insert_new_user(struct Server* server, const struct User* new_user) {
 void delete_user(struct Server* server, const struct User* old_user) {
     size_t pos = get_position_usr(server, old_user);
     if(pos != -48u){
+        free(server->users[pos].username);
         for(unsigned i = pos; i < (server->length - 1); i++){
             server->users[i] = server->users[i + 1];
         }

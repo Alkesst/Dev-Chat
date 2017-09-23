@@ -19,6 +19,8 @@ static int associate_with_id(struct User* user);
 static bool is_prime(int number);
 static void* transmission(void* polymorph);
 static int next_prime(int number);
+static void message_received(struct Server* server, struct User* user, size_t bytes_available);
+static void user_closed(struct Server* server, struct User* user);
 
 
 bool open_server(struct Server* server, int port){
@@ -187,26 +189,44 @@ static void* transmission(void* polymorph){
                 if(FD_ISSET(server->users[i].connection, &lecture)){
                     int bytes_available;
                     ioctl(server->users[i].connection, FIONREAD, &bytes_available);
-                    char* message;
-                    size_t ice_t = server->users[i].length;
-                    message = malloc(bytes_available + 5 + ice_t);
-                    recv(server->users[i].connection, message + ice_t + 4, bytes_available, 0);
-                    memcpy(message + 1, server->users[i].username, ice_t);
-                    message[0] = '[';
-                    message[ice_t+1] = ']';
-                    message[ice_t + 2] = ':';
-                    message[ice_t + 3] = ' ';
-                    message[bytes_available + ice_t + 4] = '\0';
-                    message[bytes_available + ice_t + 3] = '\n';
-                    send_message(server, &server->users[i], message);
+                    if(bytes_available == 0){
+                        user_closed(server, &server->users[i]);
+                        i--;
+                    } else{
+                        message_received(server, &server->users[i],(size_t) bytes_available);
+                    }
                 }
                 if(FD_ISSET(server->users[i].connection, &errors)){
-                    close(server->users[i].connection);
-                    delete_user(server, &server->users[i]);
+                    user_closed(server, &server->users[i]);
                     i--;
                 }
                 i++;
             }
         }
     }
+}
+
+static void message_received(struct Server* server, struct User* user, size_t bytes_available){
+    char* message;
+    size_t ice_t = user->length;
+    message = malloc(bytes_available + 5 + ice_t);
+    recv(user->connection, message + ice_t + 4, bytes_available, 0);
+    memcpy(message + 1, user->username, ice_t);
+    message[0] = '[';
+    message[ice_t+1] = ']';
+    message[ice_t + 2] = ':';
+    message[ice_t + 3] = ' ';
+    message[bytes_available + ice_t + 4] = '\0';
+    message[bytes_available + ice_t + 3] = '\n';
+    send_message(server, user, message);
+}
+
+static void user_closed(struct Server* server, struct User* user){
+    close(user->connection);
+    char *message = malloc(28 + user->length);
+    strcpy(message, "The user ");
+    strcat(message, user->username);
+    strcat(message, " was disconnected\n");
+    delete_user(server, user);
+    send_message(server, NULL, message);
 }
