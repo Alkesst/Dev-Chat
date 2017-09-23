@@ -12,6 +12,8 @@
 #include <math.h>
 #include <sys/select.h>
 #include <errno.h>
+#include <netinet/tcp.h>
+
 
 static void send_message(struct Server* server, struct User* user, char* mensaje);
 static void handle_connection(struct Server* server, int connection);
@@ -89,6 +91,8 @@ static void handle_connection(struct Server* server, int connection){
     /*If it's the first time that an user logs into the server, it adds to a list*/
     int read_chars = 0;
     char user_response[25];
+    int var = 1;
+    setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, &var, sizeof(var));
     do{
         send(connection, "Send me your username\n", 23, 0);
         read_chars = recv(connection, user_response, 25, 0);

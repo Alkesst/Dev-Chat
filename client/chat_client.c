@@ -76,8 +76,13 @@ static void* receive_and_print_message(void* polymorph){
         if(client_socket == -1){
             free(message);
             pthread_exit(NULL);
-        } else{
+        } else if(bytes_readed > 0){
             printf("%.*s", bytes_readed, message);
+        } else{
+            printf("Server has closed...\nPress intro to close this process...\n");
+            free(message);
+            fclose(stdin);
+            pthread_exit(NULL);
         }
     }
 }
@@ -85,7 +90,7 @@ static void* receive_and_print_message(void* polymorph){
 static void read_and_send_message(int socket){
     size_t length;
     char* message = NULL;
-    while(!feof(stdin)){
+    while(!feof(stdin) && !ferror(stdin)){
         if(getline(&message, &length, stdin) != -1){
             length = strlen(message);
             send(socket, message, length, 0);
