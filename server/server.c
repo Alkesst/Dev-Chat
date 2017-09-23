@@ -55,7 +55,12 @@ bool open_server(struct Server* server, int port){
             /*Listens the */
             listen(server->server, 256);
             new_list(server);
+            pthread_mutexattr_t local_sync;
+            pthread_mutexattr_init(&local_sync);
+            pthread_mutexattr_settype(&local_sync, PTHREAD_MUTEX_RECURSIVE);
+            pthread_mutex_init(&server->sync, &local_sync);
             pthread_create(&server->thread, NULL, transmission, server);
+            pthread_mutexattr_destroy(&local_sync);
         }
     }
     return server_openned;
@@ -71,6 +76,7 @@ void close_server(struct Server* server){
     close(server->server);
     /*frees the memory of the server*/
     free_list(server);
+    pthread_mutex_destroy(&server->sync);
 }
 
 void start_polling(struct Server* server){
@@ -110,7 +116,9 @@ static void handle_connection(struct Server* server, int connection){
     user.id = associate_with_id(&user);
     user.connection = connection;
     user.length = strlen(username);
+    pthread_mutex_lock(&server->sync);
     insert_new_user(server, &user);
+    pthread_mutex_unlock(&server->sync);
     send(connection, "Your username has been added successfully\n", 42, 0);
     char* message = malloc(user.length + 26);
     strcpy(message, "The user ");
@@ -125,11 +133,13 @@ static void handle_connection(struct Server* server, int connection){
 static void send_message(struct Server* server, struct User* user, char* mensaje){
     /*Sends a message to every user in the chat, except yourself*/
     size_t message_len = strlen(mensaje);
+    pthread_mutex_lock(&server->sync);
     for(unsigned i = 0; i < server->length; i++){
         if(user == NULL || server->users[i].id != user->id){
             send(server->users[i].connection, mensaje, message_len, 0);
         }
     }
+    pthread_mutex_unlock(&server->sync);
 }
 
 static int associate_with_id(struct User* user){
@@ -171,6 +181,7 @@ static void* transmission(void* polymorph){
         FD_ZERO(&lecture);
         FD_ZERO(&errors);
         int max_sock = 0;
+        pthread_mutex_lock(&server->sync);
         for(size_t i = 0; i < server->length; i++){
             if(server->users[i].connection > max_sock){
                 max_sock = server->users[i].connection;
@@ -178,6 +189,7 @@ static void* transmission(void* polymorph){
             FD_SET(server->users[i].connection, &lecture);
             FD_SET(server->users[i].connection, &errors);
         }
+        pthread_mutex_unlock(&server->sync);
         int ret_value = select(max_sock + 1, &lecture, NULL, &errors, NULL);
         if(ret_value == -1 && errno == EINTR){
             /*A new user was added*/
@@ -187,8 +199,9 @@ static void* transmission(void* polymorph){
             /*Stops everything*/
             pthread_exit(NULL);
         } else{
-            /*Somethign arrived or somebody ended the conection*/
+            /*Something arrived or somebody ended the conection*/
             int i = 0;
+            pthread_mutex_lock(&server->sync);
             while(i < server->length){
                 if(FD_ISSET(server->users[i].connection, &lecture)){
                     int bytes_available;
@@ -206,6 +219,7 @@ static void* transmission(void* polymorph){
                 }
                 i++;
             }
+            pthread_mutex_unlock(&server->sync);
         }
     }
 }

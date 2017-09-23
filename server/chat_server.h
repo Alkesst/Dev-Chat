@@ -22,4 +22,5 @@ struct Server{
     size_t capacity; // cantidad de elementos que caben en el array
     int server;
     pthread_t thread;
+    pthread_mutex_t sync;
 };
