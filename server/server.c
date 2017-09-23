@@ -99,18 +99,29 @@ static void handle_connection(struct Server* server, int connection){
     char user_response[25];
     int var = 1;
     setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, &var, sizeof(var));
-    do{
-        send(connection, "Send me your username\n", 23, 0);
-        read_chars = recv(connection, user_response, 25, 0);
-        if(read_chars > 25){
-            send(connection, "Your username must have less tan 25 chars\n", 43, 0);
-        }
-    }while(read_chars > 25);
+    char* username = NULL;
     struct User user;
-    char* username;
-    username = malloc(read_chars);
-    memcpy(username, user_response, read_chars);
-    username[read_chars - 1] = '\0';
+    do{
+        if(username != NULL){
+            free(username);
+            username = NULL;
+        }
+        do{
+            send(connection, "Send me your username\n", 23, 0);
+            read_chars = recv(connection, user_response, 25, 0);
+            if(read_chars > 25){
+                send(connection, "Your username must have less tan 25 chars\n", 43, 0);
+            }
+        }while(read_chars > 25);
+        username = malloc(read_chars);
+        memcpy(username, user_response, read_chars);
+        username[read_chars - 1] = '\0';
+        pthread_mutex_lock(&server->sync);
+        if(search_user_from_usrnm(server, username) != NULL){
+            send(connection, "This username already exists\n", 29, 0);
+        }
+        pthread_mutex_unlock(&server->sync);
+    }while(search_user_from_usrnm(server, username) != NULL);
     user.username = username;
     /*Generates an ID from a HASH of the string*/
     user.id = associate_with_id(&user);
