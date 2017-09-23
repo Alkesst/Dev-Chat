@@ -282,11 +282,11 @@ static void user_closed(struct Server* server, struct User* user){
 static void set_certificate(struct Server* server){
     SSL_CTX_set_ecdh_auto(server->ssl_context, 1);
     /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(server->ssl_context, "/Users/alec/Desktop/public.pem", SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_file(server->ssl_context, server->public_path, SSL_FILETYPE_PEM) <= 0) {
         printf("No se ha podido cargar el certificado publico\n");
         exit(EXIT_FAILURE);
     }
-    if (SSL_CTX_use_PrivateKey_file(server->ssl_context, "/Users/alec/Desktop/key.pem", SSL_FILETYPE_PEM) <= 0 ) {
+    if (SSL_CTX_use_PrivateKey_file(server->ssl_context, server->private_path, SSL_FILETYPE_PEM) <= 0 ) {
         printf("No se ha podido cargar el certificado privado\n");
         exit(EXIT_FAILURE);
     }

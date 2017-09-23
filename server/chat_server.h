@@ -26,4 +26,6 @@ struct Server{
     pthread_t thread;
     pthread_mutex_t sync;
     SSL_CTX* ssl_context;
+    const char* private_path;
+    const char* public_path;
 };

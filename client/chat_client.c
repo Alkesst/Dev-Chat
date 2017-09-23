@@ -18,6 +18,7 @@ struct Client{
     pthread_t thread;
     SSL_CTX* ctx;
     SSL* ssl;
+    const char* certificate;
 };
 
 static void* receive_and_print_message(void* polymorph);
@@ -43,6 +44,10 @@ int main(int argc, const char* argv[]){
                 fprintf(stderr, "Argument is requiered: Expected port.\n");
                 exit(2);
             }
+        } if(argc > 3){
+            client.certificate = argv[3];
+        } else{
+            client.certificate = "public.pem";
         }
     } else{
         fprintf(stderr, "Argument is requiered: Expected IP address\n");
@@ -74,15 +79,18 @@ static int set_ip_and_port(struct in_addr* ip_address, int port, struct Client* 
             SSL_load_error_strings();
             SSL_library_init();
             client->ctx = SSL_CTX_new(SSLv23_method());
+            SSL_CTX_use_certificate_file(client->ctx, client->certificate, SSL_FILETYPE_PEM);
+            SSL_CTX_load_verify_locations(client->ctx, client->certificate, NULL);
+            SSL_CTX_set_default_verify_paths(client->ctx);
             client->ssl = SSL_new(client->ctx);
             SSL_set_fd(client->ssl, client->socket);
-            SSL_set_verify(client->ssl, SSL_VERIFY_NONE, NULL);
+            SSL_set_verify(client->ssl, SSL_VERIFY_PEER, NULL);
             if(SSL_connect(client->ssl) <= 0){
                 SSL_free(client->ssl);
                 SSL_CTX_free(client->ctx);
                 close(client->socket);
                 client->socket = -1;
-                printf("There was an unknown error...\n");
+                printf("There was an unknown error...\nMaybe your certificate is not installed or updated.\n");
             } else{
                 pthread_attr_t attr;
                 pthread_attr_init(&attr);

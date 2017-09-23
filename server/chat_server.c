@@ -20,6 +20,13 @@ int main(int argc, const char* argv[]){
             /*Ends the program*/
             exit(2);
         }
+        if(argc > 3){
+            server.private_path = argv[2];
+            server.public_path = argv[3];
+        } else {
+            server.private_path = "key.pem";
+            server.public_path = "public.pem";
+        }
     }
     if(open_server(&server, port)){
         printf("Server listening in the port %d\n", + port);
