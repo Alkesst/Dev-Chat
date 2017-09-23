@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <openssl/ssl.h>
 
 
 struct User{
@@ -13,6 +14,7 @@ struct User{
     size_t length;
     int id;
     int connection;
+    SSL* ssl;
 };
 
 
@@ -23,4 +25,5 @@ struct Server{
     int server;
     pthread_t thread;
     pthread_mutex_t sync;
+    SSL_CTX* ssl_context;
 };

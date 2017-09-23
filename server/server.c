@@ -23,6 +23,7 @@ static void* transmission(void* polymorph);
 static int next_prime(int number);
 static void message_received(struct Server* server, struct User* user, size_t bytes_available);
 static void user_closed(struct Server* server, struct User* user);
+static void set_certificate(struct Server* server);
 
 
 bool open_server(struct Server* server, int port){
@@ -30,6 +31,10 @@ bool open_server(struct Server* server, int port){
     /*Blocks the signal SIGALRM we will use to stop the select() from thread*/
     sigaddset(&signal_set, SIGALRM);
     pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
+    SSL_load_error_strings();
+    SSL_library_init();
+    server->ssl_context = SSL_CTX_new(SSLv23_method());
+    set_certificate(server);
     bool server_openned = true;
     int opt = 1;
     // Opens a socket;
@@ -69,10 +74,11 @@ bool open_server(struct Server* server, int port){
 void close_server(struct Server* server){
     for(unsigned i = 0; i < server->length; i++){
         /*Shutdowns the server and sends a message to all connected users*/
-        send(server->users[i].connection, "The server is closing...\n", 25, 0);
+        SSL_write(server->users[i].ssl, "The server is closing...\n", 25);
         /*Shutdowns the connection from the server to the user*/
-        shutdown(server->users[i].connection, SHUT_WR);
+        SSL_shutdown(server->users[i].ssl);
     }
+    SSL_CTX_free(server->ssl_context);
     close(server->server);
     /*frees the memory of the server*/
     free_list(server);
@@ -98,19 +104,29 @@ static void handle_connection(struct Server* server, int connection){
     int read_chars = 0;
     char user_response[25];
     int var = 1;
-    setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, &var, sizeof(var));
-    char* username = NULL;
     struct User user;
+    setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, &var, sizeof(var));
+
+    user.ssl = SSL_new(server->ssl_context);
+    SSL_set_fd(user.ssl, connection);
+    if (SSL_accept(user.ssl) <= 0) {
+        SSL_free(user.ssl);
+        close(connection);
+        printf("Somebody tried to connect but happened an unknown error on SSL Layer...\n");
+        return;
+    }
+
+    char* username = NULL;
     do{
         if(username != NULL){
             free(username);
             username = NULL;
         }
         do{
-            send(connection, "Send me your username\n", 23, 0);
-            read_chars = recv(connection, user_response, 25, 0);
+            SSL_write(user.ssl, "Send me your username\n", 23);
+            read_chars = SSL_read(user.ssl, user_response, 25);
             if(read_chars > 25){
-                send(connection, "Your username must have less tan 25 chars\n", 43, 0);
+                SSL_write(user.ssl, "Your username must have less tan 25 chars\n", 43);
             }
         }while(read_chars > 25);
         username = malloc(read_chars);
@@ -118,10 +134,11 @@ static void handle_connection(struct Server* server, int connection){
         username[read_chars - 1] = '\0';
         pthread_mutex_lock(&server->sync);
         if(search_user_from_usrnm(server, username) != NULL){
-            send(connection, "This username already exists\n", 29, 0);
+            SSL_write(user.ssl, "This username already exists\n", 29);
         }
         pthread_mutex_unlock(&server->sync);
     }while(search_user_from_usrnm(server, username) != NULL);
+
     user.username = username;
     /*Generates an ID from a HASH of the string*/
     user.id = associate_with_id(&user);
@@ -130,7 +147,7 @@ static void handle_connection(struct Server* server, int connection){
     pthread_mutex_lock(&server->sync);
     insert_new_user(server, &user);
     pthread_mutex_unlock(&server->sync);
-    send(connection, "Your username has been added successfully\n", 42, 0);
+    SSL_write(user.ssl, "Your username has been added successfully\n", 42);
     char* message = malloc(user.length + 26);
     strcpy(message, "The user ");
     strcat(message, user.username);
@@ -147,7 +164,7 @@ static void send_message(struct Server* server, struct User* user, char* mensaje
     pthread_mutex_lock(&server->sync);
     for(unsigned i = 0; i < server->length; i++){
         if(user == NULL || server->users[i].id != user->id){
-            send(server->users[i].connection, mensaje, message_len, 0);
+            SSL_write(server->users[i].ssl, mensaje, message_len);
         }
     }
     pthread_mutex_unlock(&server->sync);
@@ -239,7 +256,7 @@ static void message_received(struct Server* server, struct User* user, size_t by
     char* message;
     size_t ice_t = user->length;
     message = malloc(bytes_available + 5 + ice_t);
-    recv(user->connection, message + ice_t + 4, bytes_available, 0);
+    bytes_available = SSL_read(user->ssl, message + ice_t + 4, bytes_available);
     memcpy(message + 1, user->username, ice_t);
     message[0] = '[';
     message[ice_t+1] = ']';
@@ -256,6 +273,21 @@ static void user_closed(struct Server* server, struct User* user){
     strcpy(message, "The user ");
     strcat(message, user->username);
     strcat(message, " was disconnected\n");
+    SSL_free(user->ssl);
     delete_user(server, user);
     send_message(server, NULL, message);
+}
+
+
+static void set_certificate(struct Server* server){
+    SSL_CTX_set_ecdh_auto(server->ssl_context, 1);
+    /* Set the key and cert */
+    if (SSL_CTX_use_certificate_file(server->ssl_context, "/Users/alec/Desktop/public.pem", SSL_FILETYPE_PEM) <= 0) {
+        printf("No se ha podido cargar el certificado publico\n");
+        exit(EXIT_FAILURE);
+    }
+    if (SSL_CTX_use_PrivateKey_file(server->ssl_context, "/Users/alec/Desktop/key.pem", SSL_FILETYPE_PEM) <= 0 ) {
+        printf("No se ha podido cargar el certificado privado\n");
+        exit(EXIT_FAILURE);
+    }
 }

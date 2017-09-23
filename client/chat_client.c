@@ -9,17 +9,21 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <openssl/ssl.h>
 // Client Main
 
 struct Client{
     int socket;
     char* username;
     pthread_t thread;
+    SSL_CTX* ctx;
+    SSL* ssl;
 };
 
 static void* receive_and_print_message(void* polymorph);
 static void read_and_send_message(struct Client* client);
 static int set_ip_and_port(struct in_addr* ip_adress, int port, struct Client* client);
+
 
 
 int main(int argc, const char* argv[]){
@@ -67,7 +71,25 @@ static int set_ip_and_port(struct in_addr* ip_address, int port, struct Client* 
             close(client->socket);
             client->socket = -1;
         } else{
-            pthread_create(&client->thread, NULL, receive_and_print_message, &client->socket);
+            SSL_load_error_strings();
+            SSL_library_init();
+            client->ctx = SSL_CTX_new(SSLv23_method());
+            client->ssl = SSL_new(client->ctx);
+            SSL_set_fd(client->ssl, client->socket);
+            SSL_set_verify(client->ssl, SSL_VERIFY_NONE, NULL);
+            if(SSL_connect(client->ssl) <= 0){
+                SSL_free(client->ssl);
+                SSL_CTX_free(client->ctx);
+                close(client->socket);
+                client->socket = -1;
+                printf("There was an unknown error...\n");
+            } else{
+                pthread_attr_t attr;
+                pthread_attr_init(&attr);
+                pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+                pthread_create(&client->thread, &attr, receive_and_print_message, &client->socket);
+                pthread_attr_destroy(&attr);
+            }
         }
     }
     return client->socket;
@@ -77,8 +99,12 @@ static void* receive_and_print_message(void* polymorph){
     struct Client* client = polymorph;
     char* message = malloc(1000);
     while(true){
-        int bytes_readed = recv(client->socket, message, 1000, 0);
-        if(client->socket == -1){
+        fd_set lecture;
+        FD_ZERO(&lecture);
+        FD_SET(client->socket, &lecture);
+        int ret_value = select(client->socket + 1, &lecture, NULL, NULL, NULL);
+        int bytes_readed = SSL_read(client->ssl, message, 1000);
+        if(ret_value == -1){
             free(message);
             pthread_exit(NULL);
         } else if(bytes_readed > 0){
@@ -103,7 +129,7 @@ static void read_and_send_message(struct Client* client){
     while(!feof(stdin) && !ferror(stdin)){
         if(getline(&message, &length, stdin) != -1){
             length = strlen(message);
-            send(client->socket, message, length, 0);
+            SSL_write(client->ssl, message, length);
             if(client->username == NULL){
                 client->username = strdup(message);
                 client->username[length - 1] = '\0';
@@ -114,5 +140,9 @@ static void read_and_send_message(struct Client* client){
         }
     }
     free(client->username);
+    SSL_shutdown(client->ssl);
     close(client->socket);
+    pthread_join(client->thread, NULL);
+    SSL_free(client->ssl);
+    SSL_CTX_free(client->ctx);
 }
