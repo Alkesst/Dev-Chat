@@ -3,7 +3,7 @@
 
 
 ## Introduction
-This local network chat.
+This is a local network chat.
 
 For this chat you we'll need CMake 3.0 and OpenSSL 1.0 or higher y pthread.
 Hosting the server in MacOS and Linux is also required (Windows support will be added in the future).
