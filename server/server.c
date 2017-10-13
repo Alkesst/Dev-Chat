@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <math.h>
 #include <sys/select.h>
 #include <errno.h>
 #include <netinet/tcp.h>
@@ -188,10 +187,10 @@ static int next_prime(int number){
 
 static bool is_prime(int number){
     int divisors = 2;
-    while((number % divisors) != 0 && divisors < sqrt(number)){
+    while((number % divisors) != 0 && divisors < (number / 2)){
         divisors++;
     }
-    return (divisors >= sqrt(number));
+    return (divisors >= (number / 2));
 }
 
 static void signal_ignore(int generic_var_name){}
