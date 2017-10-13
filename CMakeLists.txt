@@ -10,6 +10,7 @@ add_executable(chat_server
 )
 add_executable(chat_client
     client/chat_client.c
+    client/terminal_control.c
 )
 target_link_libraries(chat_server ${OPENSSL_SSL_LIBRARY} Threads::Threads)
 target_link_libraries(chat_client ${OPENSSL_SSL_LIBRARY} Threads::Threads)

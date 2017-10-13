@@ -1,25 +1,16 @@
+#include "client.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <pthread.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <openssl/ssl.h>
 // Client Main
-
-struct Client{
-    int socket;
-    char* username;
-    pthread_t thread;
-    SSL_CTX* ctx;
-    SSL* ssl;
-    const char* certificate;
-};
 
 static void* receive_and_print_message(void* polymorph);
 static void read_and_send_message(struct Client* client);
@@ -29,6 +20,7 @@ static int set_ip_and_port(struct in_addr* ip_adress, int port, struct Client* c
 
 int main(int argc, const char* argv[]){
     struct Client client;
+    memset(&client, 0, sizeof(struct Client));
     struct in_addr ip_address;
     int port = 3128;
     if(argc > 1){
@@ -116,7 +108,8 @@ static void* receive_and_print_message(void* polymorph){
             free(message);
             pthread_exit(NULL);
         } else if(bytes_readed > 0){
-            printf("%.*s", bytes_readed, message);
+            print_to_terminal(client, message, bytes_readed);
+            message[bytes_readed] = '\0';
             if(strstr(message, "This username already exists") != NULL){
                 free(client->username);
                 client->username = NULL;
@@ -135,7 +128,7 @@ static void read_and_send_message(struct Client* client){
     client->username = NULL;
     char* message = NULL;
     while(!feof(stdin) && !ferror(stdin)){
-        if(getline(&message, &length, stdin) != -1){
+        if(read_from_terminal(client, &message) != -1){
             length = strlen(message);
             SSL_write(client->ssl, message, length);
             if(client->username == NULL){
