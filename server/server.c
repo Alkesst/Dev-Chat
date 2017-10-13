@@ -194,6 +194,8 @@ static bool is_prime(int number){
     return (divisors >= sqrt(number));
 }
 
+static void signal_ignore(int generic_var_name){}
+
 static void* transmission(void* polymorph){
     /*Receives a polymorph pointer*/
     struct Server* server = polymorph;
@@ -201,7 +203,7 @@ static void* transmission(void* polymorph){
     sigset_t signal_set;
     sigaddset(&signal_set, SIGALRM);
     pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
-    signal(SIGALRM, SIG_IGN);
+    signal(SIGALRM, signal_ignore);
     while(true){
         fd_set lecture;
         fd_set errors;
@@ -236,7 +238,7 @@ static void* transmission(void* polymorph){
                     ioctl(server->users[i].connection, FIONREAD, &bytes_available);
                     if(bytes_available == 0){
                         user_closed(server, &server->users[i]);
-                        i--;
+                        if(i > 0) i--;
                     } else{
                         message_received(server, &server->users[i],(size_t) bytes_available);
                     }

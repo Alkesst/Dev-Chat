@@ -5,10 +5,10 @@
 ## Introduction
 This is a local network chat.
 
-For this chat you we'll need CMake 3.0 and OpenSSL 1.0 or higher y pthread.
-Hosting the server in MacOS and Linux is also required (Windows support will be added in the future).
+For this chat you we'll need CMake 3.0 and OpenSSL 1.0 or higher & pthread.
+Hosting the server in MacOS and Linux is also required (Windows support will be added in the future as soon as possible).
 
-## Configuring and running the Server
+### Configuring and running the Server
 The server requires a public and private certificate in .pem extension.
 
 To run the server you need to use this command
@@ -24,7 +24,7 @@ It starts the server listening on the specified port. If private and public cert
  Please notice that the certificates must be in the current working directory.
 
 
- ## Joining to the server
+### Joining to the server
 To join to the server you only need the server's adress (IP or Horstname) and public certificate.
 
 ```bash

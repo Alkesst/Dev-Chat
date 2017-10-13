@@ -55,3 +55,6 @@ dkms.conf
 *.h.gch
 .DS_Store
 build/
+.idea/
+cmake-build-debug/
+
