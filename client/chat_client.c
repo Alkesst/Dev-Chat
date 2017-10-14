@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 // Client Main
 
 static void* receive_and_print_message(void* polymorph);
@@ -42,8 +43,13 @@ int main(int argc, const char* argv[]){
     int port = 3128;
     if(argc > 1){
         if(inet_aton(argv[1], &ip_address) == 0){
-            fprintf(stderr, "The argument %s is not a valid IPv4 address\n",argv[1]);
-            exit(1);
+            struct hostent* host = gethostbyname(argv[1]);
+            if(host == NULL){
+                fprintf(stderr, "The argument %s is not a valid IPv4 address\n",argv[1]);
+                exit(1);
+            } else {
+                ip_address.s_addr = *(unsigned*) host->h_addr_list[0];
+            }
         }
         if(argc > 2){
             int local_var = atoi(argv[2]);
