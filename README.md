@@ -16,7 +16,7 @@ Execute the following command to create them:
 openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout key.pem -out public.pem -days 365
 ```
 Is possible to change the name of both certificates.
-#### Running the server
+#### Running the server
 To run the server you need to use this command
 ```bash
 chat_server {port} {private_certificate_path} {public_certificate_path}
