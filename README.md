@@ -41,3 +41,7 @@ If no public certificate is provided a default value will be used:
  - "public.pem" for public certificate
 
 Please notice that this certificate must be in the current working directory.
+
+
+### TODO
+Create an interface for Linux (KDE & gnome) and macOS (Swift)
