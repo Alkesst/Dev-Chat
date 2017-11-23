@@ -110,7 +110,7 @@ static int set_ip_and_port(struct in_addr* ip_address, int port, struct Client* 
                 pthread_attr_t attr;
                 pthread_attr_init(&attr);
                 pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-                pthread_create(&client->thread, &attr, receive_and_print_message, &client->socket);
+                pthread_create(&client->thread, &attr, receive_and_print_message, client);
                 pthread_attr_destroy(&attr);
             }
         }
