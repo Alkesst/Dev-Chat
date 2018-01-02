@@ -71,7 +71,7 @@ int read_from_terminal(struct Client* client, char** message){
     disable_canon(client);
     do{
         int a = current_char = getc(stdin);
-        if(a == 255){
+        if(a == 255 || a == EOF){
             process_successful = -1;
         } else if(current_char == 27){
             current_char = getc(stdin);
