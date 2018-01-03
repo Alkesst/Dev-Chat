@@ -23,12 +23,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-static void enable_canon(struct Client* client);
+void enable_canon(struct Client* client);
 static void disable_canon(struct Client* client);
 static inline void move_left(int pos_to_move);
 static inline void move_right(int pos_to_move);
 
-static void enable_canon(struct Client* client){
+void enable_canon(struct Client* client){
     tcsetattr(STDIN_FILENO, TCSANOW, &client->backup);
 }
 

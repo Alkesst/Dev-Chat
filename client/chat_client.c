@@ -138,8 +138,11 @@ static void* receive_and_print_message(void* polymorph){
                 client->username = NULL;
             }
         } else{
+            fflush(stdout);
             printf("Server has closed...\nPress intro to close this process...\n");
+            client->is_server_closed = true;
             free(message);
+            enable_canon(client);
             fclose(stdin);
             pthread_exit(NULL);
         }
@@ -150,15 +153,19 @@ static void read_and_send_message(struct Client* client){
     size_t length;
     client->username = NULL;
     char* message = NULL;
-    while(!feof(stdin) && !ferror(stdin)){
+    while(!feof(stdin) && !ferror(stdin) && !client->is_server_closed){
         if(read_from_terminal(client, &message) != -1){
-            length = strlen(message);
-            SSL_write(client->ssl, message, length);
-            if(client->username == NULL){
-                client->username = strdup(message);
-                client->username[length - 1] = '\0';
+            if(!client->is_server_closed) {
+                length = strlen(message);
+                if(length != 1){
+                    SSL_write(client->ssl, message, length);
+                    if(client->username == NULL){
+                        client->username = strdup(message);
+                        client->username[length - 1] = '\0';
+                    }
+                }
+                printf("(%s): ", client->username);
             }
-            printf("(%s): ", client->username);
             free(message);
             message = NULL;
         }

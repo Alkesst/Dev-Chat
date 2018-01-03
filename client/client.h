@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <openssl/ssl.h>
 #include <termios.h>
+#include <stdbool.h>
 
 struct Client{
     int socket;
@@ -32,6 +33,7 @@ struct Client{
     size_t message_len;
     size_t cursor_pos;
     char* message_read;
+    bool is_server_closed;
 };
 
 void print_to_terminal(struct Client* client, const char* message, size_t message_len);
